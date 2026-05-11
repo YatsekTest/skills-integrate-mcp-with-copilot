@@ -6,7 +6,6 @@ for extracurricular activities at Mergington High School.
 """
 
 import re
-import html
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
@@ -14,7 +13,12 @@ import os
 from pathlib import Path
 
 # Compiled regex for validating student email addresses
-_EMAIL_RE = re.compile(r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$')
+_EMAIL_RE = re.compile(
+    r"^(?=.{1,64}@)(?!\.)(?!.*\.\.)[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+"
+    r"(?:\.[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+)*@"
+    r"(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,63}$"
+)
+_ACTIVITY_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 &'()-]*$")
 _MAX_EMAIL_LEN = 254   # RFC 5321 maximum
 _MAX_NAME_LEN = 100    # reasonable upper bound for activity names
 
@@ -32,11 +36,13 @@ def _validate_email(email: str) -> str:
 
 
 def _validate_activity_name(name: str) -> str:
-    """Validate and return a sanitized activity name."""
+    """Validate and return a normalized activity name."""
     if not isinstance(name, str):
         raise HTTPException(status_code=422, detail="Invalid activity name")
-    name = html.unescape(name).strip()
+    name = name.strip()
     if not name or len(name) > _MAX_NAME_LEN:
+        raise HTTPException(status_code=422, detail="Invalid activity name")
+    if not _ACTIVITY_NAME_RE.match(name):
         raise HTTPException(status_code=422, detail="Invalid activity name")
     return name
 
