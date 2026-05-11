@@ -18,7 +18,7 @@ _EMAIL_RE = re.compile(
     r"(?:\.[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+)*@"
     r"(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,63}$"
 )
-_ACTIVITY_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 &'()-]*$")
+_ACTIVITY_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 ]*$")
 _MAX_EMAIL_LEN = 254   # RFC 5321 maximum
 _MAX_NAME_LEN = 100    # reasonable upper bound for activity names
 
