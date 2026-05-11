@@ -5,11 +5,46 @@ A super simple FastAPI application that allows students to view and sign up
 for extracurricular activities at Mergington High School.
 """
 
+import re
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
 import os
 from pathlib import Path
+
+# Compiled regex for validating student email addresses
+_EMAIL_RE = re.compile(
+    r"^(?=.{1,64}@)(?!\.)(?!.*\.\.)[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+"
+    r"(?:\.[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+)*@"
+    r"(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,63}$"
+)
+_ACTIVITY_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 ]*$")
+_MAX_EMAIL_LEN = 254   # RFC 5321 maximum
+_MAX_NAME_LEN = 100    # reasonable upper bound for activity names
+
+
+def _validate_email(email: str) -> str:
+    """Validate and return a sanitized email address."""
+    if not isinstance(email, str):
+        raise HTTPException(status_code=422, detail="Invalid email format")
+    email = email.strip()
+    if not email or len(email) > _MAX_EMAIL_LEN:
+        raise HTTPException(status_code=422, detail="Invalid email format")
+    if not _EMAIL_RE.match(email):
+        raise HTTPException(status_code=422, detail="Invalid email format")
+    return email.lower()
+
+
+def _validate_activity_name(name: str) -> str:
+    """Validate and return a normalized activity name."""
+    if not isinstance(name, str):
+        raise HTTPException(status_code=422, detail="Invalid activity name")
+    name = name.strip()
+    if not name or len(name) > _MAX_NAME_LEN:
+        raise HTTPException(status_code=422, detail="Invalid activity name")
+    if not _ACTIVITY_NAME_RE.match(name):
+        raise HTTPException(status_code=422, detail="Invalid activity name")
+    return name
 
 app = FastAPI(title="Mergington High School API",
               description="API for viewing and signing up for extracurricular activities")
@@ -91,6 +126,9 @@ def get_activities():
 @app.post("/activities/{activity_name}/signup")
 def signup_for_activity(activity_name: str, email: str):
     """Sign up a student for an activity"""
+    activity_name = _validate_activity_name(activity_name)
+    email = _validate_email(email)
+
     # Validate activity exists
     if activity_name not in activities:
         raise HTTPException(status_code=404, detail="Activity not found")
@@ -113,6 +151,9 @@ def signup_for_activity(activity_name: str, email: str):
 @app.delete("/activities/{activity_name}/unregister")
 def unregister_from_activity(activity_name: str, email: str):
     """Unregister a student from an activity"""
+    activity_name = _validate_activity_name(activity_name)
+    email = _validate_email(email)
+
     # Validate activity exists
     if activity_name not in activities:
         raise HTTPException(status_code=404, detail="Activity not found")
